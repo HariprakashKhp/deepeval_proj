@@ -22,9 +22,9 @@ for user_msg in [
        turns.append(Turn(role="user",content=user_msg))
        turns.append(Turn(role="assistant",content=reply))
 
-turnRelevancyMetric = TurnRelevancyMetric(threshold=0.5)
-retentionMetric = KnowledgeRetentionMetric(threshold=0.5)
-completnessMetric = ConversationCompletenessMetric(threshold=0.5)
+turnRelevancyMetric = TurnRelevancyMetric(threshold=0.5, model="gpt-4o")
+retentionMetric = KnowledgeRetentionMetric(threshold=0.5, model="gpt-4o")
+completnessMetric = ConversationCompletenessMetric(threshold=0.5, model="gpt-4o")
 
 test_case = ConversationalTestCase(
     turns = turns

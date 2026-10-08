@@ -8,7 +8,7 @@ Architecture:
   - Knowledge base: 9 policy documents stored as embeddings (OpenAI)
   - Vector store: langchain_core InMemoryVectorStore (no external DB needed)
   - Tool: search_policies(query) — semantic search, returns top-3 chunks
-  - LLM: GPT-4o (same as agent_plain.py, just with retrieval instead of hard-coded data)
+  - LLM: GPT-6 Luna (same as agent_plain.py, with retrieval instead of fixed lookups)
   - Instrumentation: DeepEval CallbackHandler + @observe, same 4-line pattern
 
 What's new vs agent_instrumented.py:
@@ -23,8 +23,7 @@ load_dotenv()
 
 from langchain_core.tools import tool
 from langchain_core.vectorstores import InMemoryVectorStore
-from langchain_anthropic import ChatAnthropic
-from langchain_openai import OpenAIEmbeddings
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain.agents import create_agent
 
 from deepeval.integrations.langchain import CallbackHandler
@@ -103,7 +102,10 @@ def search_policies(query: str) -> str:
 # ---------------------------------------------------------------------------
 # Agent
 # ---------------------------------------------------------------------------
-llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0)
+llm = ChatOpenAI(
+    model="gpt-6-luna", reasoning_effort="none", temperature=0,
+    use_responses_api=False,
+)
 
 agent = create_agent(
     model=llm,

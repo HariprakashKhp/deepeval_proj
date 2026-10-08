@@ -1,7 +1,7 @@
 """
 agent_plain.py
 ==============
-A simple customer-support agent built with LangChain + Claude.
+A simple customer-support agent built with LangChain + OpenAI.
 No evaluation code anywhere. This is what a developer would write
 if they'd never heard of DeepEval.
 
@@ -9,7 +9,7 @@ The agent has two tools:
   - get_order_status(order_id)  -> shipping info
   - get_refund_policy(category) -> refund rules
 
-It uses Claude to decide which tool to call and to compose the answer.
+It uses GPT-6 Luna to decide which tool to call and compose the answer.
 """
 
 from dotenv import load_dotenv
@@ -58,9 +58,12 @@ def get_refund_policy(category: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# The agent — a LangGraph ReAct agent powered by Claude.
+# The agent — a LangGraph ReAct agent powered by OpenAI.
 # ---------------------------------------------------------------------------
-llm = ChatOpenAI(model="gpt-6-luna")
+llm = ChatOpenAI(
+    model="gpt-6-luna", reasoning_effort="none", temperature=0,
+    use_responses_api=False,
+)
 
 agent = create_agent(
     model=llm,

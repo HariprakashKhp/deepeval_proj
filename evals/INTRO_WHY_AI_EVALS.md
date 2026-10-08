@@ -285,19 +285,18 @@ This is the **Judge LLM** (also called the "evaluator model"). It's a separate L
 
 Using the same LLM to both generate and evaluate creates a conflict of interest — like grading your own exam. Research has shown that LLMs tend to rate their own outputs more favorably than outputs from other models. This is called **self-evaluation bias**.
 
-### Cross-Vendor Setup — Our Approach
+### Separate Generation and Judge Models — Our Approach
 
-In our test files, we intentionally use **different providers** for the agent and the judge:
+In our test files, we use **different OpenAI models** for generation and evaluation:
 
 | Role | Model | Provider | Purpose |
 |------|-------|----------|---------|
-| Agent LLM (system under test) | Claude / GPT-4o | Anthropic / OpenAI | Runs the agent, generates responses |
+| Agent LLM (system under test) | GPT-6 Luna | OpenAI | Runs the agent, generates responses |
 | Judge LLM (evaluator) | GPT-4o | OpenAI | Scores the agent's performance |
 
-This cross-vendor setup means:
-- The agent (the student) and the judge (the teacher) are from different "families."
-- The judge has no bias toward the agent's outputs.
-- The evaluation is more objective and trustworthy.
+This setup gives generation and scoring separate model roles while requiring
+only one API key. Different models do not eliminate evaluation bias; inspect
+the judge's reasons and compare them against expected outputs and tool calls.
 
 ### What the Judge Actually Does
 
@@ -338,7 +337,7 @@ With this foundation, open `test_agent.py`. You'll see:
 - **Two metrics:** `TaskCompletionMetric` (did the agent do the job?) and `ToolCorrectnessMetric` (did it pick the right tool?).
 - **Four Goldens:** Four test scenarios, each with an input and expected tools.
 - **The evaluation loop:** `evals_iterator` walks through each golden, runs the agent, captures the trace, and lets the judge score it.
-- **Cross-vendor setup:** Claude runs the agent, GPT-4o runs the judge.
+- **Separate model roles:** GPT-6 Luna runs the agent, GPT-4o runs the judge.
 
 Everything in `test_agent.py` is a direct application of the concepts from this document. Let's go.
 
@@ -356,7 +355,7 @@ Everything in `test_agent.py` is a direct application of the concepts from this 
 | **Threshold** | The minimum score (0–1) for a metric to pass. Set by the test author based on quality requirements. |
 | **Trace** | The full record of an agent's execution — every tool call, intermediate step, and final response. Captured by DeepEval's instrumentation. |
 | **Non-deterministic** | Producing different outputs for the same input across runs. This is inherent to LLMs and is the reason traditional testing doesn't work. |
-| **Cross-vendor** | Using different LLM providers for the agent (e.g., Anthropic's Claude) and the judge (e.g., OpenAI's GPT-4o) to avoid self-evaluation bias. |
+| **Separate model roles** | Using GPT-6 Luna for generation and GPT-4o for evaluation, with both accessed through OpenAI. |
 | **Instrumentation** | Code added to the agent (like DeepEval's `CallbackHandler` and `@observe`) that captures execution traces without changing the agent's behavior. |
 | **DeepEval** | An open-source Python framework for evaluating LLM applications. Provides metrics, tracing, and test infrastructure. |
 

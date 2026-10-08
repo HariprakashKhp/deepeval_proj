@@ -2,8 +2,9 @@
 
 A minimal teaching repo that shows how to evaluate a LangChain agent with
 DeepEval's component-level evaluation: **Task Completion** and **Tool
-Correctness** metrics, applied to a cross-vendor setup (Claude as the
-agent, GPT-4o as the judge).
+Correctness** metrics. OpenAI GPT-6 Luna generates responses and synthetic
+test cases; GPT-4o judges and critics evaluate them. RAG embeddings use
+`text-embedding-3-small`. Only `OPENAI_API_KEY` is required.
 
 ---
 
@@ -11,23 +12,25 @@ agent, GPT-4o as the judge).
 
 | File | Who writes it (in real life) | What it does |
 |---|---|---|
-| `agent_plain.py` | Developer (before evals exist) | A normal LangChain + Claude agent. No DeepEval code anywhere. |
-| `agent_instrumented.py` | Developer (after QA asks) | The **same** agent, with **4 lines added** to make it observable to DeepEval. |
-| `test_agent.py` | QA / Tester (you) | Imports the agent, defines goldens, runs metrics. |
+| `agent_plain.py` | Developer (before evals exist) | A LangChain + OpenAI agent with two lookup tools and no evaluation code. |
+| `agent_instrumented.py` | Developer (after QA asks) | Adds DeepEval tracing and an MCP shipping-options tool. |
+| `evals/test_TracingComponentsTest.py` | QA / Tester (you) | Imports the agent, defines goldens, and runs metrics. |
+| `rag_agent.py` / `evals/test_rag_agent.py` | Developer / Tester | Retrieves policy chunks and evaluates retrieval quality. |
+| `chatbot.py` / `evals/test_chatbot.py` | Developer / Tester | Runs and evaluates multi-turn conversations. |
 
 ---
 
 ## The teaching point
 
-The diff between `agent_plain.py` and `agent_instrumented.py` is **4 lines**.
-That's the entire ask QA makes of dev:
+The key instrumentation changes are small:
 
 1. `from deepeval.integrations.langchain import CallbackHandler`
 2. `deepeval_callback = CallbackHandler()`
 3. `config={"callbacks": [deepeval_callback]}` on `.invoke()`
-4. `@observe(name="support_agent")` on the outer wrapper function
+4. `update_current_trace(output=reply)` to expose the final response
 
-Everything else stays exactly the same.
+The evaluation scripts add `@observe(name="support_agent")` to their wrappers
+and copy expected values from the current golden into the trace.
 
 Show students both files side by side. Once they see the diff is tiny,
 they stop being intimidated by component-level evaluation.
@@ -38,11 +41,10 @@ they stop being intimidated by component-level evaluation.
 
 ```bash
 # 1. Install dependencies
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 
 # 2. Set your API keys
-export ANTHROPIC_API_KEY=sk-ant-...
-export OPENAI_API_KEY=sk-...
+# Copy .env.example to .env and set OPENAI_API_KEY.
 
 # 3. (Optional but recommended) log in to Confident AI to see traces in a UI
 deepeval login
@@ -51,12 +53,21 @@ deepeval login
 python agent_instrumented.py
 
 # 5. Run the evaluation
-python test_agent.py
+python -m evals.test_TracingComponentsTest
 ```
+
+On Windows, activate `.venv_new\Scripts\Activate.ps1` first, or use
+`.\.venv_new\Scripts\python.exe` in place of `python`. In PyCharm, select
+that executable as the project interpreter. The MCP subprocess uses the
+same interpreter as the agent.
+
+Run `python -m evals.test_rag_agent` or `python -m evals.test_chatbot` for
+the other demos. `python -m evals.test_agent_synthesized` generates goldens
+with Luna and evaluates them with GPT-4o. These commands make live API calls.
 
 ---
 
-## What you'll see when you run `test_agent.py`
+## What you'll see when you run `evals/test_TracingComponentsTest.py`
 
 DeepEval will:
 1. Invoke `support_agent(...)` for each golden input
@@ -65,9 +76,9 @@ DeepEval will:
 4. Apply **Tool Correctness** to the tool-call span
 5. Print scores + reasons per golden
 
-The third golden is intentionally borderline — watch for the interesting
-case where Task Completion may pass but Tool Correctness fails (or vice
-versa). That's the moment that makes component-level evaluation click.
+The two goldens cover order status and refund policy. Compare task completion
+with tool correctness: a plausible answer and the right tool choice are
+separate evaluation targets.
 
 ---
 
@@ -76,8 +87,8 @@ versa). That's the moment that makes component-level evaluation click.
 | Minute | Activity |
 |---|---|
 | 0–5 | Show `agent_plain.py`. Ask: "How would you test this?" |
-| 5–10 | Show `agent_instrumented.py` side-by-side. Walk through the 4-line diff. |
-| 10–25 | Walk through `test_agent.py` line by line. |
+| 5–10 | Show `agent_instrumented.py` side-by-side. Walk through tracing and MCP setup. |
+| 10–25 | Walk through `evals/test_TracingComponentsTest.py` line by line. |
 | 25–35 | Run it live. Discuss the borderline result. |
 | 35+ | Open discussion: what other metrics? what other goldens? |
 
@@ -88,8 +99,9 @@ versa). That's the moment that makes component-level evaluation click.
 DeepEval's integration surface evolves. Before your first session, run the
 demo end-to-end once and confirm:
 
-- `ChatAnthropic(model="claude-sonnet-4-5")` — if this errors, swap to the
-  latest Claude model from the Anthropic console.
+- Agents use `ChatOpenAI(model="gpt-6-luna", reasoning_effort="none", temperature=0)`.
+  Luna's Chat Completions function calls require `reasoning_effort="none"`.
+  Confirm your OpenAI account can access this model.
 - `from deepeval.integrations.langchain import CallbackHandler` — works as
   written in recent DeepEval versions; older versions may use a different
   import path.

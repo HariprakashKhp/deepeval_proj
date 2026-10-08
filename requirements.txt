@@ -1,8 +1,12 @@
 deepeval
 langchain
 langchain-openai
-langchain-anthropic
 langgraph
 langchain-core
+langchain-mcp-adapters
+mcp
+nest_asyncio
+numpy
 openai
 python-dotenv
+deepeval[inspect]

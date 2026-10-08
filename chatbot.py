@@ -1,7 +1,7 @@
 """
 chatbot.py
 ==========
-A multi-turn customer-support chatbot with tool calling, built with GPT-4o.
+A multi-turn customer-support chatbot with tool calling, built with GPT-6 Luna.
 
 Tools available (same data as agent_plain.py):
   - get_order_status(order_id)   → real-time shipping status from in-memory DB
@@ -149,7 +149,8 @@ def chat(
 
     while True:
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-6-luna",
+            reasoning_effort="none",
             messages=[{"role": "system", "content": SYSTEM_PROMPT}] + history,
             tools=TOOLS,
             tool_choice="auto",
